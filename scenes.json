@@ -1,0 +1,40 @@
+{
+  "scenes": [
+    {
+      "id": "sample",
+      "image": "scenes/sample.svg",
+      "width": 1600,
+      "height": 1000,
+      "items": [
+        { "name": "Red balloon", "x": 0.1625, "y": 0.22, "r": 0.05 },
+        { "name": "Yellow star", "x": 0.5125, "y": 0.15, "r": 0.05 },
+        { "name": "Blue house", "x": 0.8375, "y": 0.23, "r": 0.05 },
+        { "name": "Green tree", "x": 0.2625, "y": 0.56, "r": 0.05 },
+        { "name": "Purple heart", "x": 0.6875, "y": 0.48, "r": 0.04 },
+        { "name": "Orange fish", "x": 0.45, "y": 0.76, "r": 0.05 },
+        { "name": "Pink flower", "x": 0.8875, "y": 0.7, "r": 0.045 },
+        { "name": "Teal mug", "x": 0.1375, "y": 0.82, "r": 0.05 },
+        { "name": "White cloud", "x": 0.625, "y": 0.12, "r": 0.045 },
+        { "name": "Gold key", "x": 0.35375, "y": 0.4, "r": 0.045 }
+      ]
+    },
+    {
+      "id": "toyrug1",
+      "image": "scenes/toyrug1.jpg",
+      "width": 768,
+      "height": 1344,
+      "items": [
+        { "name": "Gold anchor", "x": 0.082, "y": 0.056, "r": 0.055 },
+        { "name": "Green alarm clock", "x": 0.892, "y": 0.068, "r": 0.065 },
+        { "name": "Large blue marble", "x": 0.495, "y": 0.175, "r": 0.055 },
+        { "name": "Red mushroom", "x": 0.052, "y": 0.415, "r": 0.045 },
+        { "name": "Playing card (8 of Hearts)", "x": 0.688, "y": 0.505, "r": 0.095 },
+        { "name": "Green puzzle piece", "x": 0.578, "y": 0.692, "r": 0.045 },
+        { "name": "Purple spool of thread", "x": 0.362, "y": 0.778, "r": 0.058 },
+        { "name": "Yellow rubber duck", "x": 0.505, "y": 0.942, "r": 0.060 },
+        { "name": "Silver acorn", "x": 0.088, "y": 0.925, "r": 0.045 },
+        { "name": "Black pocket compass", "x": 0.898, "y": 0.775, "r": 0.062 }
+      ]
+    }
+  ]
+}

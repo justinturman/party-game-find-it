@@ -1,0 +1,10 @@
+{
+  "id": "find-it",
+  "name": "Find It",
+  "category": "Puzzle Games",
+  "description": "Race to spot the hidden objects in a packed picture.",
+  "summary": "A cluttered picture appears on the TV with a list of objects to find. Everyone gets the same picture on their phone, and you can pinch to zoom and drag to pan. Tap an object to claim it: it gets circled on every screen, crossed off the TV's list with your name beside it, and scores you a point. Your finds are circled in green on your phone and everyone else's in orange. Tap the wrong spot and you must wait a moment before tapping again. When every object is found, the winner is shown and any player can start the next picture. Players can join or leave at any time.",
+  "thumbnail": "thumbnail.jpg",
+  "color": "#1565c0",
+  "openJoin": true
+}

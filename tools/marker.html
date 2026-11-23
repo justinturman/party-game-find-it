@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Find It: scene marker</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: #1e1e2f; color: #eee; }
+  #left { flex: 1; overflow: auto; padding: 12px; }
+  #right { width: 380px; overflow: auto; padding: 12px; background: #2a2a40; }
+  #stage { position: relative; display: inline-block; max-width: 100%; }
+  #img { display: block; max-width: 100%; height: auto; user-select: none; }
+  #svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+  input, button, textarea { font: inherit; }
+  input[type=text], input[type=number], textarea { width: 100%; padding: 4px 6px; border-radius: 6px;
+        border: 1px solid #555; background: #1e1e2f; color: #eee; }
+  label { display: block; margin: 6px 0 2px; font-size: 0.85rem; opacity: 0.8; }
+  .row { display: flex; gap: 6px; align-items: center; padding: 6px; margin: 4px 0; border-radius: 8px; background: #33334d; }
+  .row.sel { outline: 2px solid #ffd54f; }
+  .row .n { width: 1.6rem; text-align: center; font-weight: bold; }
+  .row input[type=number] { width: 5rem; }
+  button { padding: 6px 10px; border: 0; border-radius: 6px; background: #8ab4ff; color: #111; font-weight: bold; cursor: pointer; }
+  button.x { background: #ef5350; color: #fff; }
+  .hint { font-size: 0.85rem; opacity: 0.75; }
+  #warn { color: #ffb347; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div id="left">
+  <p><input type="file" id="file" accept="image/*" /> <span id="dims" class="hint"></span></p>
+  <p class="hint">Click the picture to add an item. Drag a circle to move it. Each circle should cover its object with a little margin.</p>
+  <div id="stage">
+    <img id="img" alt="" />
+    <svg id="svg" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+<div id="right">
+  <h3>Scene</h3>
+  <label>Scene id (lowercase letters, digits, hyphens)</label>
+  <input type="text" id="sid" value="my-scene" />
+  <label>Image path inside the game folder</label>
+  <input type="text" id="spath" value="scenes/my-scene.jpg" />
+  <h3>Items</h3>
+  <div id="list"></div>
+  <p id="warn"></p>
+  <h3>Result</h3>
+  <p class="hint">Paste this into the "scenes" list in scenes.json.</p>
+  <textarea id="out" rows="14" readonly></textarea>
+  <p><button id="copy">Copy</button> <span id="copied" class="hint"></span></p>
+  <h3>Edit an existing scene</h3>
+  <textarea id="inp" rows="4" placeholder="Paste a scene's JSON here, then choose its picture on the left"></textarea>
+  <p><button id="load">Load</button></p>
+</div>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const img = $('img');
+  const svg = $('svg');
+  let nat = { w: 1600, h: 1000 };
+  let items = []; // { name, x, y, r }: fractions of the picture's width and height
+  let sel = -1;
+  let drag = null;
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+  function point(e) {
+    const r = svg.getBoundingClientRect();
+    return { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) };
+  }
+
+  function highlightRows() {
+    [...$('list').children].forEach((row, k) => row.classList.toggle('sel', k === sel));
+  }
+
+  function draw() {
+    svg.setAttribute('viewBox', `0 0 ${nat.w} ${nat.h}`);
+    svg.innerHTML = '';
+    items.forEach((it, i) => {
+      const on = i === sel;
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', it.x * nat.w);
+      c.setAttribute('cy', it.y * nat.h);
+      c.setAttribute('r', it.r * nat.w);
+      c.setAttribute('fill', on ? 'rgba(255,213,79,0.25)' : 'rgba(255,82,82,0.15)');
+      c.setAttribute('stroke', on ? '#ffd54f' : '#ff5252');
+      c.setAttribute('stroke-width', 3);
+      c.setAttribute('vector-effect', 'non-scaling-stroke');
+      c.style.cursor = 'move';
+      c.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        sel = i;
+        drag = i;
+        svg.setPointerCapture(e.pointerId);
+        highlightRows();
+        draw();
+      });
+      svg.appendChild(c);
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', it.x * nat.w);
+      t.setAttribute('y', it.y * nat.h);
+      t.setAttribute('fill', '#ffffff');
+      t.setAttribute('font-size', nat.w / 45);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'central');
+      t.setAttribute('pointer-events', 'none');
+      t.style.paintOrder = 'stroke';
+      t.setAttribute('stroke', '#000000');
+      t.setAttribute('stroke-width', nat.w / 300);
+      t.textContent = i + 1;
+      svg.appendChild(t);
+    });
+  }
+
+  function out() {
+    const clean = items.map((it) => ({
+      name: it.name.trim(),
+      x: +it.x.toFixed(4),
+      y: +it.y.toFixed(4),
+      r: +it.r.toFixed(4),
+    }));
+    const lower = clean.map((c) => c.name.toLowerCase());
+    const problems = [];
+    if (!clean.length) problems.push('add at least one item');
+    if (clean.some((c) => !c.name)) problems.push('some items have no name');
+    if (new Set(lower).size !== lower.length) problems.push('two items share a name');
+    if (!/^[a-z0-9-]+$/.test($('sid').value.trim())) problems.push('the scene id may only use lowercase letters, digits and hyphens');
+    if (!/^scenes\/[\w.-]+\.(jpg|jpeg|png|webp|svg)$/i.test($('spath').value.trim())) problems.push('the image path should look like scenes/name.jpg');
+    $('warn').textContent = problems.length ? 'Fix first: ' + problems.join('; ') + '.' : '';
+    const scene = {
+      id: $('sid').value.trim(),
+      image: $('spath').value.trim(),
+      width: nat.w,
+      height: nat.h,
+      items: clean,
+    };
+    $('out').value = JSON.stringify(scene, null, 2);
+  }
+
+  function update() {
+    const list = $('list');
+    list.innerHTML = '';
+    items.forEach((it, i) => {
+      const row = document.createElement('div');
+      row.className = 'row' + (i === sel ? ' sel' : '');
+      row.innerHTML =
+        '<span class="n"></span><input type="text" maxlength="40" />' +
+        '<input type="number" step="0.1" min="0.5" max="25" title="size, % of picture width" />' +
+        '<button class="x">✕</button>';
+      row.querySelector('.n').textContent = i + 1;
+      const name = row.querySelector('input[type=text]');
+      name.value = it.name;
+      name.oninput = () => { it.name = name.value; out(); };
+      const size = row.querySelector('input[type=number]');
+      size.value = (it.r * 100).toFixed(1);
+      size.oninput = () => {
+        const v = parseFloat(size.value);
+        if (v > 0) { it.r = v / 100; draw(); out(); }
+      };
+      row.querySelector('.x').onclick = () => { items.splice(i, 1); sel = -1; draw(); update(); };
+      row.onclick = () => { sel = i; draw(); highlightRows(); };
+      list.appendChild(row);
+    });
+    out();
+  }
+
+  svg.addEventListener('pointerdown', (e) => {
+    if (e.target !== svg) return;
+    const p = point(e);
+    items.push({ name: 'item ' + (items.length + 1), x: p.x, y: p.y, r: 0.03 });
+    sel = items.length - 1;
+    draw();
+    update();
+    const row = $('list').children[sel];
+    if (row) row.querySelector('input[type=text]').select();
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (drag === null) return;
+    const p = point(e);
+    items[drag].x = p.x;
+    items[drag].y = p.y;
+    draw();
+    out();
+  });
+  svg.addEventListener('pointerup', () => { drag = null; });
+  svg.addEventListener('pointercancel', () => { drag = null; });
+
+  $('file').onchange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    img.onload = () => {
+      nat = { w: img.naturalWidth, h: img.naturalHeight };
+      $('dims').textContent = nat.w + ' × ' + nat.h + ' px';
+      draw();
+      out();
+    };
+    img.src = URL.createObjectURL(f);
+    if ($('sid').value === 'my-scene') {
+      const base = f.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my-scene';
+      $('sid').value = base;
+      $('spath').value = 'scenes/' + f.name.replace(/[^\w.-]+/g, '-');
+    }
+  };
+
+  ['sid', 'spath'].forEach((id) => { $(id).oninput = out; });
+
+  $('copy').onclick = async () => {
+    const text = $('out').value;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      $('out').select();
+      document.execCommand('copy');
+    }
+    $('copied').textContent = 'Copied!';
+    setTimeout(() => { $('copied').textContent = ''; }, 1500);
+  };
+
+  $('load').onclick = () => {
+    try {
+      const s = JSON.parse($('inp').value);
+      $('sid').value = s.id || '';
+      $('spath').value = s.image || '';
+      nat = { w: s.width || nat.w, h: s.height || nat.h };
+      items = (s.items || []).map((i) => ({ name: i.name, x: i.x, y: i.y, r: i.r }));
+      sel = -1;
+      draw();
+      update();
+    } catch (err) {
+      alert('That is not valid JSON: ' + err.message);
+    }
+  };
+
+  draw();
+  update();
+})();
+</script>
+</body>
+</html>
