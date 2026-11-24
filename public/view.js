@@ -2,7 +2,6 @@
   const root = document.getElementById('root');
   const NS = 'http://www.w3.org/2000/svg';
 
-  // Anything players typed (their nicknames) is escaped before it goes into the page
   const esc = (s) =>
     String(s).replace(/[&<>"']/g, (c) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
@@ -11,28 +10,22 @@
   const $ = (id) => document.getElementById(id);
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-  // On the TV every player has their own colour. On a phone it is green for you, orange for the rest.
   const PALETTE = ['#ff5252', '#448aff', '#69f0ae', '#ffd740', '#e040fb', '#18ffff', '#ff6e40', '#b2ff59',
                    '#ff80ab', '#b388ff', '#84ffff', '#ffab40', '#ccff90', '#f48fb1', '#80d8ff', '#ea80fc'];
   const colorOf = (id) => PALETTE[Number(id) % PALETTE.length];
   const MINE = '#2ecc71';
   const OTHERS = '#ff9800';
 
-  let last = null; // the most recent message from the platform
-  let layoutKey = null; // which screen layout is currently built
-  let rs = { round: -1, init: false, coolUntil: 0, giveUpAt: 0, confirm: false }; // what this phone knows about the current game
+  let last = null;
+  let layoutKey = null;
+  let rs = { round: -1, init: false, coolUntil: 0, giveUpAt: 0, confirm: false };
   let toastUntil = 0;
 
   const nameOf = (names, id) => esc(names[id] || `Player ${Number(id) + 1}`);
 
   // ---------------- Reliable taps ----------------
-  // A tap carries a sequence number. We send one at a time and resend it until the
-  // server's count (mySeq) shows it was accepted, so a tap is never lost or counted twice.
   const rel = { queue: [], inflight: null, sentAt: 0, ack: 0 };
-  function relReset() {
-    rel.queue = [];
-    rel.inflight = null;
-  }
+  function relReset() { rel.queue = []; rel.inflight = null; }
   function relSend() {
     const op = rel.inflight;
     if (!op) return;
@@ -55,15 +48,9 @@
   }
 
   // ---------------- Pan and zoom ----------------
-  const vw = { round: null, k: 1, tx: 0, ty: 0 }; // kept between rebuilds, so flipping to the TV view and back keeps your zoom
-  let vpEl = null;
-  let worldEl = null;
-  let W = 1;
-  let H = 1;
-  let vpW = 1;
-  let vpH = 1;
-  let kMin = 1;
-  let kMax = 8;
+  const vw = { round: null, k: 1, tx: 0, ty: 0 };
+  let vpEl = null, worldEl = null;
+  let W = 1000, H = 1000, vpW = 1, vpH = 1, kMin = 1, kMax = 8;
 
   function measure() {
     vpW = vpEl.clientWidth || 1;
@@ -73,7 +60,7 @@
   }
   function applyStroke() {
     const g = $('mk');
-    if (g) g.setAttribute('stroke-width', String(4 / vw.k)); // circles keep the same thickness on screen at any zoom
+    if (g) g.setAttribute('stroke-width', String(6 / vw.k));
   }
   function applyView() {
     const sw = W * vw.k;
@@ -152,23 +139,15 @@
 
     vpEl.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      try {
-        vpEl.setPointerCapture(e.pointerId);
-      } catch (err) {
-        /* not needed everywhere */
-      }
+      try { vpEl.setPointerCapture(e.pointerId); } catch (err) {}
       ptrs.set(e.pointerId, posOf(e));
       if (ptrs.size === 1) {
         const p = ptrs.values().next().value;
         g = { sx: p.x, sy: p.y, lx: p.x, ly: p.y, t: Date.now(), moved: false, multi: false };
       } else if (ptrs.size === 2 && g) {
         const t = two();
-        g.multi = true;
-        g.d0 = t.d;
-        g.c0 = t.c;
-        g.k0 = vw.k;
-        g.tx0 = vw.tx;
-        g.ty0 = vw.ty;
+        g.multi = true; g.d0 = t.d; g.c0 = t.c;
+        g.k0 = vw.k; g.tx0 = vw.tx; g.ty0 = vw.ty;
       }
     });
 
@@ -181,19 +160,15 @@
         const k2 = clamp((g.k0 * t.d) / g.d0, kMin, kMax);
         const wx = (g.c0.x - g.tx0) / g.k0;
         const wy = (g.c0.y - g.ty0) / g.k0;
-        vw.k = k2;
-        vw.tx = t.c.x - wx * k2;
-        vw.ty = t.c.y - wy * k2;
+        vw.k = k2; vw.tx = t.c.x - wx * k2; vw.ty = t.c.y - wy * k2;
         applyView();
       } else if (!g.multi && ptrs.size === 1) {
         if (!g.moved && Math.hypot(p.x - g.sx, p.y - g.sy) > 8) g.moved = true;
         if (g.moved) {
-          vw.tx += p.x - g.lx;
-          vw.ty += p.y - g.ly;
+          vw.tx += p.x - g.lx; vw.ty += p.y - g.ly;
           applyView();
         }
-        g.lx = p.x;
-        g.ly = p.y;
+        g.lx = p.x; g.ly = p.y;
       }
     });
 
@@ -204,29 +179,24 @@
       if (ptrs.size === 0 && g) {
         const done = g;
         g = null;
-        // A short press that did not travel is a tap; anything else was a pan or a pinch
         if (e.type === 'pointerup' && !done.multi && !done.moved && Date.now() - done.t < 600) onTap(p.x, p.y);
       }
     };
     vpEl.addEventListener('pointerup', up);
     vpEl.addEventListener('pointercancel', up);
 
-    vpEl.addEventListener(
-      'wheel',
-      (e) => {
-        e.preventDefault();
-        const p = posOf(e);
-        zoomAt(p.x, p.y, e.deltaY < 0 ? 1.25 : 0.8);
-      },
-      { passive: false }
-    );
+    vpEl.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const p = posOf(e);
+      zoomAt(p.x, p.y, e.deltaY < 0 ? 1.25 : 0.8);
+    }, { passive: false });
   }
 
   function setupViewport(S) {
     vpEl = $('vp');
     worldEl = $('world');
-    W = S.scene.width;
-    H = S.scene.height;
+    W = 1000;
+    H = 1000;
     measure();
     if (vw.round !== S.round) {
       vw.round = S.round;
@@ -242,14 +212,10 @@
   }
   window.onresize = () => {
     if (!vpEl || !vpEl.isConnected) return;
-    measure();
-    vw.k = clamp(vw.k, kMin, kMax);
-    applyView();
+    measure(); vw.k = clamp(vw.k, kMin, kMax); applyView();
   };
 
   // ---------------- Shared pieces ----------------
-  // Builds a screen layout once. Later updates only change the parts inside it,
-  // so the picture, your zoom and the buttons are never torn down by other players' finds.
   function layout(key, html, onBuild) {
     if (key === layoutKey) return;
     layoutKey = key;
@@ -257,8 +223,6 @@
     if (onBuild) onBuild();
   }
 
-  // Everyone who has joined, with their points. People who left show as "away"
-  // (and are hidden if they never scored).
   function rosterOf(msg, S) {
     const names = msg.names;
     const rows = [];
@@ -282,13 +246,9 @@
     if (!rows.length) return '<p class="progress">Waiting for players to join…</p>';
     return (
       '<ul class="scores">' +
-      rows
-        .map(
-          (r) => `<li class="${r.away ? 'away' : ''}${r.id === myId ? ' me' : ''}">
+      rows.map((r) => `<li class="${r.away ? 'away' : ''}${r.id === myId ? ' me' : ''}">
             <span class="dot" style="background:${colorFor(r.id)}"></span>
-            <span class="pname">${esc(r.name)}${r.away ? ' (away)' : ''}</span><strong>${r.count}</strong></li>`
-        )
-        .join('') +
+            <span class="pname">${esc(r.name)}${r.away ? ' (away)' : ''}</span><strong>${r.count}</strong></li>`).join('') +
       '</ul>'
     );
   }
@@ -302,35 +262,53 @@
       : `<h2>🤝 It's a tie: ${who} (${n} each)</h2>`;
   }
 
-  // The circles drawn over the picture
-  function marksSVG(S, colorFor, nonScaling) {
-    const w = S.scene.width;
-    const h = S.scene.height;
+  // OPTIMIZED BOARD RENDERER
+  function boardHTML(S, colorFor, nonScaling) {
     const ns = nonScaling ? ' vector-effect="non-scaling-stroke"' : '';
-    let out = '';
-    S.missed.forEach((m) => {
-      out += `<circle cx="${m.x * w}" cy="${m.y * h}" r="${m.r * w}" fill="none" stroke="#cfd8dc" stroke-opacity="0.8"${ns}/>`;
+    
+    // 1. Render Emojis as divs (much faster than SVG text)
+    let emojis = '';
+    S.layout.forEach((it) => {
+      const opacity = (S.phase === 'done' && it.isDistractor) ? 0.15 : 1;
+      const left = (it.x * 100) + '%';
+      const top = (it.y * 100) + '%';
+      const size = (it.r * 2000); 
+      
+      const style = it.isDistractor 
+        ? `opacity:${opacity};` 
+        : `opacity:${opacity}; filter: drop-shadow(0 0 6px rgba(255,255,255,0.6));`;
+      
+      emojis += `<div style="position:absolute; left:${left}; top:${top}; width:${size}px; height:${size}px; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; font-size:${size * 0.8}px; line-height:1; ${style}">${it.emoji}</div>`;
     });
+
+    // 2. Render Found Circles as SVG
+    let circles = '';
     S.found.forEach((f) => {
       const c = colorFor(f.by);
-      out += `<circle cx="${f.x * w}" cy="${f.y * h}" r="${f.r * w}" fill="${c}" fill-opacity="0.18" stroke="${c}"${ns}/>`;
+      circles += `<circle cx="${f.x * 1000}" cy="${f.y * 1000}" r="${f.r * 1000}" fill="${c}" fill-opacity="0.25" stroke="${c}" stroke-width="6"${ns}/>`;
     });
-    return out;
+
+    // 3. Combine into a perfectly aligned wrapper. SVG is on top (z-index: 10).
+    return `
+      <div style="position:absolute; inset:0; overflow:hidden;">
+        ${emojis}
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style="position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:10;">
+          <g id="mk">${circles}</g>
+        </svg>
+      </div>
+    `;
   }
 
   // ---------------- TV and spectators ----------------
-    function tvScreen(msg) {
+  function tvScreen(msg) {
     const { names, state } = msg;
     const S = state.G;
-    const w = S.scene.width;
-    const h = S.scene.height;
     layout(
       `tv:${S.round}`,
       `<div class="tv" style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:flex-start">
          <div class="scenebox" style="flex:1 1 520px;min-width:0;display:flex;justify-content:center">
-           <div class="scene" style="position:relative;width:min(100%, calc((100vh - 24px) * ${w / h}))">
-             <img src="${esc(S.scene.image)}" alt="" style="display:block;width:100%;height:auto;border-radius:10px" />
-             <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%"><g id="mk" stroke-width="5"></g></svg>
+           <div class="scene" style="position:relative;width:min(100%, 80vh); aspect-ratio:1; background:${esc(S.scene.background)}; border-radius:10px; overflow:hidden;">
+             ${boardHTML(S, colorOf, true)}
            </div>
          </div>
          <div class="side" style="flex:0 1 340px;min-width:260px;text-align:left">
@@ -342,29 +320,28 @@
        </div>`
     );
     $('title').textContent = `Find It · Game ${S.round + 1}`;
-    $('mk').innerHTML = marksSVG(S, colorOf, true);
     $('banner').innerHTML =
       S.phase === 'done'
-        ? resultHTML(S, names) +
-          (S.gaveUp ? '<p class="progress">This game was ended early.</p>' : '') +
+        ? resultHTML(S, names) + (S.gaveUp ? '<p class="progress">This game was ended early.</p>' : '') +
           '<p class="waiting">Tap “Next game” on any phone.</p>'
         : `<p class="progress">${S.found.length} of ${S.items.length} found</p>`;
 
     const foundBy = {};
     S.found.forEach((f) => (foundBy[f.i] = f.by));
-    const missed = new Set(S.missed.map((m) => m.i));
+    
     $('items').innerHTML =
       '<ul class="items">' +
-      S.items
-        .map((name, i) => {
-          if (foundBy[i] !== undefined) {
-            const by = foundBy[i];
-            return `<li class="found"><s>${esc(name)}</s><span class="by" style="color:${colorOf(by)}">${nameOf(names, by)}</span></li>`;
+      S.items.map((it) => {
+          // Look up the emoji for this target item
+          const targetData = S.layout.find(l => l.i === it.i);
+          const emoji = targetData ? targetData.emoji : '';
+
+          if (foundBy[it.i] !== undefined) {
+            const by = foundBy[it.i];
+            return `<li class="found"><s>${emoji} ${esc(it.name)}</s><span class="by" style="color:${colorOf(by)}">${nameOf(names, by)}</span></li>`;
           }
-          if (missed.has(i)) return `<li class="missed">${esc(name)}<span class="by">not found</span></li>`;
-          return `<li>${esc(name)}</li>`;
-        })
-        .join('') +
+          return `<li>${emoji} ${esc(it.name)}</li>`;
+        }).join('') +
       '</ul>';
     $('scores').innerHTML = scoresHTML(rosterOf(msg, S), colorOf, null);
   }
@@ -374,29 +351,25 @@
     if (rs.round === S.round && rs.init) return;
     relReset();
     rs = {
-      round: S.round,
-      init: true,
+      round: S.round, init: true,
       mine: new Set(S.found.filter((f) => f.by === playerID).map((f) => f.i)),
-      lastSeq: null,
-      coolUntil: 0,
-      giveUpAt: Date.now() + S.giveUpLeft,
-      confirm: false,
+      lastSeq: null, coolUntil: 0, giveUpAt: Date.now() + S.giveUpLeft, confirm: false,
     };
   }
 
-    function phoneScreen(msg) {
+  function phoneScreen(msg) {
     const { names, state, playerID } = msg;
     const S = state.G;
-    const w = S.scene.width;
-    const h = S.scene.height;
     layout(
       `p:${S.round}`,
       `<div class="topline"><span id="me"></span><span id="count"></span></div>
        <div class="vpwrap" style="position:relative;max-width:900px;margin:0 auto">
-         <div id="vp" class="viewport" style="position:relative;width:100%;height:clamp(220px,56vh,640px);overflow:hidden;background:#111;border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none">
-           <div id="world" class="world" style="position:absolute;left:0;top:0;transform-origin:0 0;width:${w}px;height:${h}px">
-             <img src="${esc(S.scene.image)}" alt="" draggable="false" style="display:block;width:${w}px;height:${h}px;pointer-events:none" />
-             <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" style="position:absolute;left:0;top:0;pointer-events:none"><g id="mk"></g><g id="pings"></g></svg>
+         <div id="vp" class="viewport" style="position:relative;width:100%;aspect-ratio:1; max-height:56vh; overflow:hidden;background:${esc(S.scene.background)};border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none">
+           <div id="world" class="world" style="position:absolute;left:0;top:0;transform-origin:0 0;width:1000px;height:1000px">
+             ${boardHTML(S, (id) => (id === playerID ? MINE : OTHERS), false)}
+             <svg viewBox="0 0 1000 1000" width="1000" height="1000" style="position:absolute;left:0;top:0;pointer-events:none; z-index:20;">
+               <g id="pings"></g>
+             </svg>
            </div>
          </div>
          <div class="zoombtns" style="position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px"><button id="zin">＋</button><button id="zout">－</button><button id="zfit">⤢</button></div>
@@ -409,17 +382,15 @@
       () => setupViewport(S)
     );
 
-    // Your finds are green, everyone else's are orange
-    $('mk').innerHTML = marksSVG(S, (id) => (id === playerID ? MINE : OTHERS), false);
     applyStroke();
 
-    // Feedback for my own taps
     let gained = 0;
     S.found.forEach((f) => {
       if (f.by === playerID && !rs.mine.has(f.i)) {
         rs.mine.add(f.i);
         gained += 1;
-        toast(`✅ ${S.items[f.i]}! +1`);
+        const targetItem = S.items.find(it => it.i === f.i);
+        toast(`✅ ${targetItem ? targetItem.name : 'Item'}! +1`);
       }
     });
     if (rs.lastSeq === null) {
@@ -440,18 +411,20 @@
 
     const foundBy = {};
     S.found.forEach((f) => (foundBy[f.i] = f.by));
-    const missed = new Set(S.missed.map((m) => m.i));
+    
     $('items').innerHTML = S.items
-      .map((n, i) => {
-        if (foundBy[i] !== undefined) {
-          return `<span class="chip ${foundBy[i] === playerID ? 'mine' : 'other'}"><s>${esc(n)}</s></span>`;
+      .map((it) => {
+        // Look up the emoji for this target item
+        const targetData = S.layout.find(l => l.i === it.i);
+        const emoji = targetData ? targetData.emoji : '';
+
+        if (foundBy[it.i] !== undefined) {
+          return `<span class="chip ${foundBy[it.i] === playerID ? 'mine' : 'other'}"><s>${emoji} ${esc(it.name)}</s></span>`;
         }
-        if (missed.has(i)) return `<span class="chip missed">${esc(n)}</span>`;
-        return `<span class="chip">${esc(n)}</span>`;
+        return `<span class="chip">${emoji} ${esc(it.name)}</span>`;
       })
       .join('');
 
-    // Buttons
     const c = $('controls');
     if (S.phase === 'playing') {
       c.innerHTML = rs.confirm
@@ -461,11 +434,7 @@
       if (gu) gu.onclick = () => { rs.confirm = true; phoneScreen(last); };
       const yes = $('giveyes');
       if (yes) {
-        yes.onclick = () => {
-          yes.disabled = true;
-          rs.confirm = false;
-          send('endRound', S.round);
-        };
+        yes.onclick = () => { yes.disabled = true; rs.confirm = false; send('endRound', S.round); };
       }
       const no = $('giveno');
       if (no) no.onclick = () => { rs.confirm = false; phoneScreen(last); };
@@ -475,9 +444,7 @@
       nx.onclick = () => {
         nx.disabled = true;
         send('nextScene', S.round);
-        setTimeout(() => {
-          if (nx.isConnected) nx.disabled = false; // refused, so let them try again
-        }, 2500);
+        setTimeout(() => { if (nx.isConnected) nx.disabled = false; }, 2500);
       };
     }
   }
@@ -496,7 +463,6 @@
     }
   }
 
-  // Several times a second: the pause countdown, messages fading, and resending unconfirmed taps
   setInterval(() => {
     const now = Date.now();
     const cool = $('cool');
@@ -511,12 +477,8 @@
     if (gu && gu.disabled && now >= rs.giveUpAt) gu.disabled = false;
     if (rel.inflight && now - rel.sentAt > 900) {
       rel.inflight.tries += 1;
-      if (rel.inflight.tries > 6) {
-        rel.inflight = null;
-        relPump();
-      } else {
-        relSend();
-      }
+      if (rel.inflight.tries > 6) { rel.inflight = null; relPump(); } 
+      else { relSend(); }
     }
   }, 250);
 

@@ -2,12 +2,12 @@ import fs from 'node:fs';
 
 const INVALID_MOVE = 'INVALID_MOVE';
 
-// Timings. Exported so the tests can inspect them.
 export const config = { minGiveUpMs: 30000, missBaseMs: 1000, missStepMs: 1000, missMaxMs: 5000 };
 
-// ---- The scenes ----
-// scenes.json lists each picture and where its items are. It stays on the server:
-// players only receive an item's position after someone has found it.
+// A massive pool of native emojis to use as distractors.
+const DISTRACTOR_STRING = "🍎🍏🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🦴🌭🍔🍟🍕🫓🥪🥙🧆🌮🌯🫔🥗🥘🫕🥫🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍥🥠🥮🍢🍡🍧🍨🍦🥧🧁🍰🎂🍮🍭🍬🍫🍿🍩🍪🌰🥜🍯🥛🍼🫖☕🍵🧃🥤🧋🍶🍺🍻🥂🍷🥃🍸🍹🧉🍾🐶🐱🐭🐹🐰🦊🐻🐼🐻‍❄️🐨🐯🦁🐮🐷🐽🐸🐵🙈🙉🙊🐒🐔🐧🐦🐤🐣🐥🦆🦅🦉🦇🐺🐗🐴🦄🐝🪱🐛🦋🐌🐞🐜🪰🪲🪳🦟🦗🕷🕸🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐕‍🦺🐈🐈‍⬛🪶🐓🦃🦤🦚🦜🦢🦩🕊🐇🦝🦨🦡🦫🦦🦥🐁🐀🐿🦔🐾🐉🐲🌵🎄🌲🌳🌴🪵🌱🌿☘️🍀🎍🪴🎋🍃🍂🍁🍄🐚🪨🌾💐🌷🌹🥀🌺🌸🌼🌻🌞🌝🌛🌜🌚🌕🌖🌗🌘🌑🌒🌓🌔🌙🌎🌍🌏🪐💫⭐🌟✨⚡️☄️💥🔥🌪🌈☀️🌤⛅️🌥☁️🌦🌧⛈🌩🌨❄️☃️⛄️🌬💨💧💦☔️☂️🌊🌫🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶🫑🌽🥕🫒🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🦴🌭🍔🍟🍕🫓🥪🥙🧆🌮🌯🫔🥗🥘🫕🥫🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍥🥠🥮🍢🍡🍧🍨🍦🥧🧁🍰🎂🍮🍭🍬🍫🍿🍩🍪🌰🥜🍯🥛🍼🫖☕🍵🧃🥤🧋🍶🍺🍻🥂🍷🥃🍸🍹🧉🍾⚽️🏀🏈⚾️🥎🎾🏐🏉🥏🎱🪀🏓🏸🏒🏑🥍🏏🪃🥅⛳️🪁🏹🎣🤿🥊🥋🎽🛹🛼🛷⛸🥌🎿⛷🏂🪂🏋️‍♀️🤼‍♀️🤸‍♀️⛹️‍♀️🤺🤾‍♀️🏌️‍♀️🏇🧘‍♀️🏄‍♀️🏊‍♀️🤽‍♀️🚣‍♀️🧗‍♀️🚵‍♀️🚴‍♀️🏆🥇🥈🥉🏅🎖🏵🎗🎫🎟🎪🤹‍♀️🎭🩰🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🪗🎸🪕🎻🎲♟🎯🎳🎮🎰🧩🚗🚕🚙🚌🚎🏎🚓🚑🚒🚐🛻🚚🚛🚜🦯🦽🦼🛴🚲🛵🏍🛺🚨🚔🚍🚘🚖🚡🚠🚟🚃🚋🚞🚝🚄🚅🚈🚂🚆🚇🚊🚉✈️🛫🛬🛩💺🛰🚀🛸🚁🛶⛵️🚤🛥🛳⛴🚢⚓️🪝⛽️🚧🚦🚥🚏🗺🗿🗽🗼🏰🏯🏟🎡🎢🎠⛲️⛱🏖🏝🏜🌋⛰🏔🗻🏕⛺️🛖🏠🏡🏘🏚🏗🏭🏢🏬🏣🏤🏥🏦🏨🏪🏫🏩💒🏛⛪️🕌🕍🛕🕋⛩🛤🛣🗾🎑🏞🌅🌄🌠🎇🎆🌇🌆🏙🌃🌌🌉🌁⌚️📱📲💻⌨️🖥🖨🖱🖲🕹🗜💽💾💿📀📼📷📸📹🎥📽🎞📞☎️📟📠📺📻🎙🎚🎛🧭⏱⏲⏰🕰⌛️⏳📡🔋🔌💡🔦🕯🪔🧯🛢💸💵💴💶💷🪙💰💳💎⚖️🪜🧰🪛🔧🔨⚒🛠⛏🪚🔩⚙️🪤🧱⛓🧲🔫💣🧨🪓🔪🗡⚔️🛡🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🕳🩹🩺💊💉🩸🧬🦠🧫🧪🌡🧹🪠🧺🧻🚽🚰🚿🛁🛀🧼🪥🪒🧽🪣🧴🛎🔑🗝🚪🪑🛋🛏🛌🧸🪆🖼🪞🪟🛍🛒🎁🎈🎏🎀🪄🪙🧧📩📨📧💌📥📤📦🏷🪧📪📫📬📭📮📯📜📃📄📑🧾📊📈📉🗒🗓📆📅🗑📇🗃🗳🗄📋📁📂🗂🗞📰📓📔📒📕📗📘📙📚📖🔖🧷🔗📎🖇📐📏🧮📌📍✂️🖊🖋✒️🖌🖍📝✏️🔍🔎🔏🔐🔒🔓❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟☮️✝️☪️🕉☸️✡️🔯🕎☯️☦️🛐⛎♈️♉️♊️♋️♌️♍️♎️♏️♐️♑️♒️♓️🆔⚛️🉑☢️☣️📴📳🈶🈚️🈸🈺🈷️✴️🆚💮🉐㊙️㊗️🈴🈵🈹🈲🅰️🅱️🆎🆑🅾️🆘❌⭕️🛑⛔️📛🚫💯💢♨️🚷🚯🚳🚱🔞📵🚭❗️❕❓❔‼️⁉️🔅🔆〽️⚠️🚸🔱⚜️🔰♻️✅🈯️💹❇️✳️❎🌐💠Ⓜ️🌀💤🏧🚾♿️🅿️🛗🈳🈂️🛂🛃🛄🛅🚹🚺🚼🚻🚮🎦📶🈁🔣ℹ️🔤🔡🔠🆖🆗🆙🆒🆕🆓0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣🔟🔢#️⃣*️⃣⏏️▶️⏸⏯⏹⏺⏭⏮⏩⏪⏫⏬◀️🔼🔽➡️⬅️⬆️⬇️↗️↘️↙️↖️↕️↔️↩️↪️⤴️⤵️🔀🔁🔂🔄🔃🎵🎶➕➖➗✖️🟰♾️💲💱™️©️®️👁️‍🗨️🔚🔙🔛🔝🔜〰️➰➿✔️☑️🔘🔴🟠🟡🟢🔵🟣⚫️⚪️🟤🔺🔻🔸🔹🔶🔷🔳🔲▪️▫️◾️◽️◼️◻️🟥🟧🟨🟩🟦🟪⬛️⬜️🟫🔈🔇🔉🔊🔔🔕📣📢👁️👂👃👅👄🫀🫁🧠🦷🦴👀👤👥🫂👶🧒👦👧🧑👱‍♀️👨🧔👩🧓👴👵🙍‍♂️🙍‍♀️🙎‍♂️🙎‍♀️🙅‍♂️🙅‍♀️🙆‍♂️🙆‍♀️💁‍♂️💁‍♀️🙋‍♂️🙋‍♀️🧏‍♂️🧏‍♀️🙇‍♂️🙇‍♀️🤦‍♂️🤦‍♀️🤷‍♂️🤷‍♀️🧑‍⚕️🧑‍🎓🧑‍🏫🧑‍⚖️🧑‍🌾🧑‍🍳🧑‍🔧🧑‍🏭🧑‍💼🧑‍🔬🧑‍💻🧑‍🎤🧑‍🎨🧑‍✈️🧑‍🚀🧑‍🚒👮‍♂️👮‍♀️🕵️‍♂️🕵️‍♀️💂‍♂️💂‍♀️🥷👷‍♂️👷‍♀️🤴👸👳‍♂️👳‍♀️👲🧕🤵‍♂️🤵‍♀️👰‍♂️👰‍♀️🤰🤱👩‍🍼👨‍🍼🧑‍🍼👼🎅🤶🦸‍♂️🦸‍♀️🦹‍♂️🦹‍♀️🧙‍♂️🧙‍♀️🧚‍♂️🧚‍♀️🧛‍♂️🧛‍♀️🧜‍♂️🧜‍♀️🧝‍♂️🧝‍♀️🧞‍♂️🧞‍♀️🧟‍♂️🧟‍♀️💆‍♂️💆‍♀️💇‍♂️💇‍♀️🚶‍♂️🚶‍♀️🧍‍♂️🧍‍♀️🧎‍♂️🧎‍♀️🏃‍♂️🏃‍♀️💃🕺🕴👯‍♂️👯‍♀️🧖‍♂️🧖‍♀️🧗‍♂️🧗‍♀️🤺🏇⛷🏂🏌️‍♂️🏌️‍♀️🏄‍♂️🏄‍♀️🚣‍♂️🚣‍♀️🏊‍♂️🏊‍♀️⛹️‍♂️⛹️‍♀️🏋️‍♂️🏋️‍♀️🚴‍♂️🚴‍♀️🚵‍♂️🚵‍♀️🤸‍♂️🤸‍♀️🤼‍♂️🤼‍♀️🤽‍♂️🤽‍♀️🤾‍♂️🤾‍♀️🤹‍♂️🤹‍♀️🧘‍♂️🧘‍♀️🛀🛌🧑‍🤝‍🧑👭👫👬💏👩‍❤️‍💋‍👨👨‍❤️‍💋‍👨👩‍❤️‍💋‍👩💑👩‍❤️‍👨👨‍❤️‍👨👩‍❤️‍👩👪👨‍👩‍👦👨‍👩‍👧👨‍👩‍👧‍👦👨‍👩‍👦‍👦👨‍👩‍👧‍👧👨‍👨‍👦👨‍👨‍👧👨‍👨‍👧‍👦👨‍👨‍👦‍👦👨‍👨‍👧‍👧👩‍👩‍👦👩‍👩‍👧👩‍👩‍👧‍👦👩‍👩‍👦‍👦👩‍👩‍👧‍👧👨‍👦👨‍👦‍👦👨‍👧👨‍👧‍👦👨‍👧‍👧👩‍👦👩‍👦‍👦👩‍👧👩‍👧‍👦👩‍👧‍👧🗣👤👥🫂👣🧳🌂☂️🧵🪡🧶🪢👓🕶🥼🦺👔👕👖🧣🧤🧥🧦👗👘🥻🩱🩲🩳👙👚👛👜👝🛍🎒🩴👞👟🥾🥿👠👡🩰👢👑👒🎩🎓🧢🪖⛑📿💄💍💎🔇🔈🔉🔊📢📣📯🔔🔕🎼🎵🎶🎙🎚🎛🎤🎧📻🎷🪗🎸🎹🎺🪕🎻🥁🪘📱📲☎️📞📟📠🔋🪫🔌💻🖥💽💾💿📀🧮🎥🎞📽🎬📺📷📸📹📼🔍🔎🕯💡🔦🏮🪔📔📕📖📗📘📙📚📓📒📃📜📄📰🗞📑🔖🏷💰🪙💴💵💶💷💸💳🧾✉️📧📨📩📤📥📦📫📪📬📭📮🗳✏️✒️🖋🖊🖌🖍📝📁📂🗂📅📆🗒🗓📇📈📉📊📋📌📍📎🖇📏📐✂️🗃🗄🗑🔒🔓🔏🔐🔑🗝🔨🪓⛏⚒🛠🗡⚔️🔫🪃🏹🛡🪚🔧🪛🔩⚙️🗜⚖️🦯🔗⛓🪝🧰🧲🪜⚗️🧪🧫🧬🔭🔬🕳🩹🩺💊💉🩸🧬🦠🧫🧪🌡🧹🪠🧺🧻🚽🚰🚿🛁🛀🧼🪥🪒🧽🪣🧴🛎🔑🗝🚪🪑🛋🛏🛌🧸🪆🖼🪞🪟🛍🛒🎁🎈🎏🎀🪄🪙🧧📩📨📧💌📥📤📦🏷🪧📪📫📬📭📮📯📜📃📄📑🧾📊📈📉🗒🗓📆📅🗑📇🗃🗳🗄📋📁📂🗂🗞📰📓📔📒📕📗📘📙📚📖🔖🧷🔗📎🖇📐📏🧮📌📍✂️🖊🖋✒️🖌🖍📝✏️🔍🔎🔏🔐🔒🔓";
+const DISTRACTORS = Array.from(new Set(Array.from(DISTRACTOR_STRING)));
+
 function loadScenes() {
   const raw = JSON.parse(fs.readFileSync(new URL('./scenes.json', import.meta.url), 'utf8'));
   const list = raw.scenes;
@@ -21,15 +21,8 @@ function loadScenes() {
       throw new Error(`${where}: "id" must be unique, using lowercase letters, digits and hyphens`);
     }
     ids.add(s.id);
-    if (
-      typeof s.image !== 'string' ||
-      !/^scenes\/[\w.-]+\.(jpg|jpeg|png|webp|svg)$/i.test(s.image) ||
-      s.image.includes('..')
-    ) {
-      throw new Error(`${where} (${s.id}): "image" must look like scenes/name.jpg`);
-    }
-    if (!(s.width > 0) || !(s.height > 0)) {
-      throw new Error(`${where} (${s.id}): needs "width" and "height" in pixels`);
+    if (typeof s.background !== 'string' || !/^#[0-9a-fA-F]{3,8}$/.test(s.background)) {
+      throw new Error(`${where} (${s.id}): needs a valid "background" hex color`);
     }
     if (!Array.isArray(s.items) || s.items.length === 0) {
       throw new Error(`${where} (${s.id}): needs at least one item`);
@@ -42,10 +35,8 @@ function loadScenes() {
       if (seen.has(name.toLowerCase())) throw new Error(`${label}: the name "${name}" is used twice`);
       seen.add(name.toLowerCase());
       it.name = name;
-      const okPos = (v) => typeof v === 'number' && v >= 0 && v <= 1;
-      if (!okPos(it.x) || !okPos(it.y)) throw new Error(`${label}: "x" and "y" must be between 0 and 1`);
-      if (typeof it.r !== 'number' || !(it.r > 0 && it.r <= 0.25)) {
-        throw new Error(`${label}: "r" must be a number above 0 and at most 0.25`);
+      if (typeof it.emoji !== 'string' || it.emoji.length === 0) {
+        throw new Error(`${label}: needs a valid "emoji" character`);
       }
     });
   });
@@ -53,19 +44,78 @@ function loadScenes() {
 }
 export const SCENES = loadScenes();
 
-// ---- Helpers ----
+const rand = (min, max) => Math.random() * (max - min) + min;
+
+function generateScene(scene) {
+  const placed = [];
+  
+  // 1. Filter out distractors that match the target items for THIS scene
+  const targetEmojis = scene.items.map((it) => it.emoji);
+  let availableDistractors = DISTRACTORS.filter((d) => !targetEmojis.includes(d));
+  
+  // 2. Shuffle and select 300 unique distractors to cover the board
+  availableDistractors = availableDistractors
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 300);
+
+  // 3. Place distractors FIRST (they can overlap each other)
+  availableDistractors.forEach((emoji) => {
+    // Radius is half the size (0.015 to 0.035)
+    const r = rand(0.015, 0.035);
+    // Distribute randomly across the whole board
+    const x = rand(r + 0.02, 1 - r - 0.02);
+    const y = rand(r + 0.02, 1 - r - 0.02);
+    
+    placed.push({ name: 'Distractor', emoji, x, y, r, isDistractor: true });
+  });
+
+  // 4. Place the target items ON TOP of the distractors
+  scene.items.forEach((it) => {
+    let x, y, overlap;
+    let tries = 0;
+    
+    // Radius is half the size (0.02 to 0.045)
+    const r = rand(0.02, 0.045);
+    
+    do {
+      x = rand(r + 0.05, 1 - r - 0.05);
+      y = rand(r + 0.05, 1 - r - 0.05);
+      
+      // Ensure targets don't overlap other targets
+      overlap = placed.some((p) => {
+        if (p.isDistractor) return false;
+        const dist = Math.hypot(p.x - x, p.y - y);
+        return dist < (p.r + r) * 1.8; 
+      });
+      tries++;
+      
+      if (tries > 50) {
+        const cols = 4;
+        const rows = 4;
+        const col = placed.length % cols;
+        const row = Math.floor(placed.length / cols) % rows;
+        x = (col + 0.5) / cols;
+        y = (row + 0.5) / rows;
+        overlap = false;
+      }
+    } while (overlap);
+    
+    // Because this is pushed AFTER the distractors, it will render on top
+    placed.push({ ...it, x, y, r, isDistractor: false });
+  });
+
+  return placed;
+}
+
 const isSeat = (id) => id !== null && id !== undefined && id !== '';
 const current = (G) => SCENES[G.order[G.round % G.order.length]];
 
-// Taps carry a sequence number, so a tap that is resent after a lost reply
-// is only ever applied once, and always in order.
 function takeSeq(G, id, seq) {
   if (seq !== (G.seqs[id] || 0) + 1) return false;
   G.seqs[id] = seq;
   return true;
 }
 
-// A shuffled play order that never starts with the scene that was just played
 function newOrder(random, avoid) {
   const order = random.Shuffle(SCENES.map((_, i) => i));
   if (SCENES.length > 1 && order[0] === avoid) [order[0], order[1]] = [order[1], order[0]];
@@ -74,26 +124,29 @@ function newOrder(random, avoid) {
 
 export const game = {
   name: 'find-it',
-  // Players join at any time. All seats are created up front and fill as people arrive.
   minPlayers: 16,
   maxPlayers: 16,
 
-  // Everyone taps at the same time
   turn: { activePlayers: { all: null } },
 
-  setup: ({ random }) => ({
-    order: newOrder(random, -1),
-    round: 0,
-    phase: 'playing', // playing -> done -> (next game) -> playing ...
-    gaveUp: false,
-    startedAt: Date.now(),
-    found: {}, // item index -> { by, n }
-    misses: {}, // player id -> { until, streak }
-    seqs: {},
-  }),
+  setup: ({ random }) => {
+    const order = newOrder(random, -1);
+    const scene = SCENES[order[0]];
+    const layout = generateScene(scene);
+    return {
+      order,
+      round: 0,
+      phase: 'playing',
+      gaveUp: false,
+      startedAt: Date.now(),
+      layout,
+      found: {},
+      misses: {},
+      seqs: {},
+    };
+  },
 
   moves: {
-    // A tap. Positions are checked here, so the map never leaves the server.
     tap: {
       client: false,
       move: ({ G, playerID }, seq, x, y) => {
@@ -103,31 +156,37 @@ export const game = {
 
         const now = Date.now();
         const m = G.misses[playerID] || { until: 0, streak: 0 };
-        if (now < m.until) return; // still paused after a wrong tap
+        if (now < m.until) return;
 
-        const scene = current(G);
         let hit = -1;
         let hitDist = Infinity;
         let onFound = false;
-        scene.items.forEach((it, i) => {
-          const d = Math.hypot((x - it.x) * scene.width, (y - it.y) * scene.height);
-          if (d > it.r * scene.width) return;
+        
+        // We must check in reverse order so targets (which are at the end of the array) are checked first
+        for (let i = G.layout.length - 1; i >= 0; i--) {
+          const it = G.layout[i];
+          if (it.isDistractor) continue;
+          
+          const d = Math.hypot((x - it.x) * 1000, (y - it.y) * 1000);
+          if (d > it.r * 1000) continue;
+          
           if (G.found[i]) {
             onFound = true;
-            return;
+            continue;
           }
           if (d < hitDist) {
             hit = i;
             hitDist = d;
           }
-        });
+        }
 
         if (hit >= 0) {
           G.found[hit] = { by: playerID, n: Object.keys(G.found).length + 1 };
           G.misses[playerID] = { until: 0, streak: 0 };
-          if (Object.keys(G.found).length === scene.items.length) G.phase = 'done';
+          
+          const totalTargets = G.layout.filter((it) => !it.isDistractor).length;
+          if (Object.keys(G.found).length === totalTargets) G.phase = 'done';
         } else if (!onFound) {
-          // Tapping an item someone has just found costs nothing; anything else is a miss
           const streak = m.streak + 1;
           const pause = Math.min(config.missMaxMs, config.missBaseMs + (streak - 1) * config.missStepMs);
           G.misses[playerID] = { until: now + pause, streak };
@@ -135,7 +194,6 @@ export const game = {
       },
     },
 
-    // Any player can start the next picture. The round number stops a late second tap skipping one.
     nextScene: {
       client: false,
       move: ({ G, playerID, random }, round) => {
@@ -143,6 +201,9 @@ export const game = {
         const previous = G.order[G.round % G.order.length];
         G.round += 1;
         if (G.round % G.order.length === 0) G.order = newOrder(random, previous);
+        
+        const scene = SCENES[G.order[G.round % G.order.length]];
+        G.layout = generateScene(scene);
         G.found = {};
         G.misses = {};
         G.gaveUp = false;
@@ -151,7 +212,6 @@ export const game = {
       },
     },
 
-    // Any player can end a picture that nobody can finish, after a short while
     endRound: {
       client: false,
       move: ({ G, playerID }, round) => {
@@ -163,16 +223,25 @@ export const game = {
     },
   },
 
-  // THE PRIVACY RULES:
-  //  - an item's position is sent only once the item has been found
-  //  - unfound items' positions are sent only after the game is over
-  //  - everyone gets item NAMES from the start (the TV needs the list)
-  //  - a player's pause is sent only to that player
   playerView: ({ G, playerID }) => {
     const scene = current(G);
     const now = Date.now();
     const isPlayer = isSeat(playerID);
     const done = G.phase === 'done';
+
+    const visibleLayout = G.layout.map((it, i) => {
+      const isFound = !!G.found[i];
+      return {
+        i,
+        name: it.isDistractor ? 'Distractor' : it.name,
+        emoji: it.emoji,
+        x: it.x,
+        y: it.y,
+        r: it.r,
+        isDistractor: it.isDistractor,
+        foundBy: isFound ? G.found[i].by : null
+      };
+    });
 
     const found = Object.keys(G.found)
       .map(Number)
@@ -180,15 +249,10 @@ export const game = {
       .map((i) => ({
         i,
         by: G.found[i].by,
-        x: scene.items[i].x,
-        y: scene.items[i].y,
-        r: scene.items[i].r,
+        x: G.layout[i].x,
+        y: G.layout[i].y,
+        r: G.layout[i].r,
       }));
-    const missed = done
-      ? scene.items
-          .map((it, i) => ({ i, x: it.x, y: it.y, r: it.r }))
-          .filter((m) => !G.found[m.i])
-      : [];
 
     const counts = {};
     for (const f of found) counts[f.by] = (counts[f.by] || 0) + 1;
@@ -199,13 +263,21 @@ export const game = {
     }
 
     const m = isPlayer ? G.misses[playerID] : null;
+    
+    const targets = G.layout
+      .map((it, i) => ({ i, name: it.name, isDistractor: it.isDistractor }))
+      .filter((it) => !it.isDistractor);
+
     return {
       phase: G.phase,
       round: G.round,
-      scene: { id: scene.id, image: scene.image, width: scene.width, height: scene.height },
-      items: scene.items.map((it) => it.name),
+      scene: { 
+        id: scene.id, 
+        background: scene.background
+      },
+      layout: visibleLayout,
+      items: targets,
       found,
-      missed,
       counts,
       winners,
       gaveUp: G.gaveUp,
@@ -214,5 +286,4 @@ export const game = {
       mySeq: isPlayer ? G.seqs[playerID] || 0 : 0,
     };
   },
-  // No endIf: the room keeps going, one picture after another
 };
